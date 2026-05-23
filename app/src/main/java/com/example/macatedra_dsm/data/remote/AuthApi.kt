@@ -22,4 +22,13 @@ interface AuthApi {
     suspend fun getProfile(
         @Header("Authorization") token: String
     ): Response<AuthResponse>
+
+    @POST("auth/logout")
+    suspend fun logout(
+        @Header("Authorization") token: String
+    ): Response<MessageLogoutResponse>
 }
+
+data class MessageLogoutResponse(
+    val message: String
+)

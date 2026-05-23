@@ -73,9 +73,30 @@ fun DashboardScreen(
 
     var showConfirmDialog by remember { mutableStateOf(false) }
     var isConfirmingAttendance by remember { mutableStateOf(false) }
+    var isLoggingOut by remember { mutableStateOf(false) }
+
     var refreshKey by remember { mutableIntStateOf(0) }
 
     val scope = rememberCoroutineScope()
+
+    fun logoutFromBackend() {
+        if (isLoggingOut) return
+
+        scope.launch {
+            try {
+                isLoggingOut = true
+
+                RetrofitClient.authApi.logout(
+                    token = "Bearer $token"
+                )
+            } catch (e: Exception) {
+                // Aunque falle el logout del backend, cerramos sesión local.
+            } finally {
+                isLoggingOut = false
+                onLogout()
+            }
+        }
+    }
 
     LaunchedEffect(token, refreshKey) {
         try {
@@ -90,9 +111,11 @@ fun DashboardScreen(
 
             if (profileResponse.isSuccessful) {
                 user = profileResponse.body()
-            } else {
+            } else if (profileResponse.code() == 401 || profileResponse.code() == 403) {
                 onInvalidToken()
                 return@LaunchedEffect
+            } else {
+                errorMessage = "No se pudo cargar el perfil del usuario."
             }
 
             val eventsResponse = RetrofitClient.eventsApi.getUpcomingEvents(bearerToken)
@@ -104,6 +127,9 @@ fun DashboardScreen(
                 if (nextEvent == null) {
                     eventMessage = "No hay eventos próximos para mostrar."
                 }
+            } else if (eventsResponse.code() == 401 || eventsResponse.code() == 403) {
+                onInvalidToken()
+                return@LaunchedEffect
             } else {
                 eventMessage = "No se pudieron cargar los eventos."
             }
@@ -146,9 +172,13 @@ fun DashboardScreen(
                         DashboardHeader(
                             userName = user?.name ?: "Usuario",
                             showMenu = showMenu,
+                            isLoggingOut = isLoggingOut,
                             onOpenMenu = { showMenu = true },
                             onDismissMenu = { showMenu = false },
-                            onLogout = onLogout
+                            onLogout = {
+                                showMenu = false
+                                logoutFromBackend()
+                            }
                         )
                     }
 
@@ -401,6 +431,9 @@ fun DashboardScreen(
                                         if (response.isSuccessful) {
                                             showConfirmDialog = false
                                             refreshKey++
+                                        } else if (response.code() == 401 || response.code() == 403) {
+                                            showConfirmDialog = false
+                                            onInvalidToken()
                                         } else {
                                             errorMessage = "No se pudo confirmar la asistencia."
                                             showConfirmDialog = false
@@ -459,6 +492,7 @@ fun DashboardScreen(
 private fun DashboardHeader(
     userName: String,
     showMenu: Boolean,
+    isLoggingOut: Boolean,
     onOpenMenu: () -> Unit,
     onDismissMenu: () -> Unit,
     onLogout: () -> Unit
@@ -490,13 +524,22 @@ private fun DashboardHeader(
 
         Box {
             IconButton(
-                onClick = onOpenMenu
+                onClick = onOpenMenu,
+                enabled = !isLoggingOut
             ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Opciones",
-                    tint = Color.White
-                )
+                if (isLoggingOut) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opciones",
+                        tint = Color.White
+                    )
+                }
             }
 
             DropdownMenu(
@@ -507,7 +550,7 @@ private fun DashboardHeader(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = "Cerrar sesión",
+                            text = if (isLoggingOut) "Cerrando sesión..." else "Cerrar sesión",
                             color = Color.White
                         )
                     },
@@ -518,10 +561,8 @@ private fun DashboardHeader(
                             tint = Color(0xFFFCA5A5)
                         )
                     },
-                    onClick = {
-                        onDismissMenu()
-                        onLogout()
-                    }
+                    enabled = !isLoggingOut,
+                    onClick = onLogout
                 )
             }
         }
