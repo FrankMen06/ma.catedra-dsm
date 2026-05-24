@@ -69,10 +69,13 @@ private enum class EventTab(
 @Composable
 fun EventsScreen(
     token: String,
+    mode: String,
     onCreateEvent: () -> Unit,
     onEditEvent: (String) -> Unit,
-    onInvalidToken: () -> Unit
-) {
+    onInvalidToken: () -> Unit,
+    onRateEvent: (String) -> Unit,
+    onViewRatings: (String) -> Unit
+){
     var selectedTab by remember { mutableStateOf(EventTab.ALL) }
     var events by remember { mutableStateOf<List<EventResponse>>(emptyList()) }
 
@@ -258,6 +261,12 @@ fun EventsScreen(
                                 },
                                 onDeleteClick = {
                                     eventToDelete = event
+                                },
+                                onRateClick = {
+                                    val id = event.id
+                                    if (!id.isNullOrBlank()) {
+                                        onRateEvent(id)
+                                    }
                                 }
                             )
                         }
@@ -558,7 +567,8 @@ private fun EventCard(
     showConfirmButton: Boolean,
     onConfirmClick: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onRateClick: () -> Unit
 ) {
     val dateTimeText = listOfNotNull(
         event.date?.takeIf { it.isNotBlank() },
@@ -719,6 +729,11 @@ private fun EventCard(
             }
 
             if (event.confirmed == true) {
+                Button(
+                    onClick = { onRateClick() }
+                ) {
+                    Text("Calificar evento")
+                }
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Surface(
@@ -749,7 +764,13 @@ private fun EventCard(
                     }
                 }
             }
-
+//            Button(
+//                onClick = {
+//                    onRateClick()
+//                }
+//            ) {
+//                Text("Ver comentarios")
+//            }
             if (showConfirmButton) {
                 Spacer(modifier = Modifier.height(14.dp))
 

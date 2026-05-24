@@ -52,9 +52,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.macatedra_dsm.data.remote.AuthResponse
 import com.example.macatedra_dsm.data.remote.EventResponse
 import com.example.macatedra_dsm.data.remote.RetrofitClient
+import com.example.macatedra_dsm.data.remote.AuthResponse
 import kotlinx.coroutines.launch
 
 @Composable
@@ -62,8 +62,8 @@ fun DashboardScreen(
     token: String,
     onInvalidToken: () -> Unit,
     onLogout: () -> Unit,
-    onGoToEvents: () -> Unit
-) {
+    onGoToEvents: (String) -> Unit
+){
     var isLoading by remember { mutableStateOf(true) }
     var user by remember { mutableStateOf<AuthResponse?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -178,6 +178,9 @@ fun DashboardScreen(
                             onLogout = {
                                 showMenu = false
                                 logoutFromBackend()
+                            },
+                            onGoToEvents = { mode ->
+                                onGoToEvents(mode)
                             }
                         )
                     }
@@ -194,7 +197,7 @@ fun DashboardScreen(
                         ) {
                             Column(
                                 modifier = Modifier.clickable {
-                                    onGoToEvents()
+                                    onGoToEvents("ALL")
                                 },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -226,6 +229,9 @@ fun DashboardScreen(
                             }
 
                             Column(
+                                modifier = Modifier.clickable {
+                                    onGoToEvents("ATTENDING")
+                                },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Surface(
@@ -495,7 +501,8 @@ private fun DashboardHeader(
     isLoggingOut: Boolean,
     onOpenMenu: () -> Unit,
     onDismissMenu: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onGoToEvents: (String) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),

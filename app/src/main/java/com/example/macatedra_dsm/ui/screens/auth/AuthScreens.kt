@@ -59,7 +59,7 @@ import com.example.macatedra_dsm.data.remote.RegisterRequest
 import com.example.macatedra_dsm.data.remote.RetrofitClient
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
-
+import android.util.Log
 private val DarkBlue = Color(0xFF0F172A)
 private val MidBlue = Color(0xFF1E293B)
 private val AccentBlue = Color(0xFF2563EB)
@@ -153,7 +153,9 @@ fun LoginScreen(
                                     password = password
                                 )
                             )
-
+                            Log.d("LOGIN_DEBUG", "code = ${response.code()}")
+                            Log.d("LOGIN_DEBUG", "body = ${response.body()}")
+                            Log.d("LOGIN_DEBUG", "error = ${response.errorBody()?.string()}")
                             if (response.isSuccessful) {
                                 val body = response.body()
                                 val token = body?.token
