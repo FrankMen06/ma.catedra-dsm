@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -31,6 +33,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +61,9 @@ import androidx.compose.ui.unit.sp
 import com.example.macatedra_dsm.data.remote.EventResponse
 import com.example.macatedra_dsm.data.remote.RetrofitClient
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private enum class EventTab(
     val title: String
@@ -74,10 +81,12 @@ fun EventsScreen(
     onEditEvent: (String) -> Unit,
     onInvalidToken: () -> Unit,
     onRateEvent: (String) -> Unit,
-    onViewRatings: (String) -> Unit
-){
+    onViewRatings: (String) -> Unit,
+    onViewEvent: (String) -> Unit
+) {
     var selectedTab by remember { mutableStateOf(EventTab.ALL) }
     var events by remember { mutableStateOf<List<EventResponse>>(emptyList()) }
+    var currentUserUid by remember { mutableStateOf<String?>(null) }
 
     var isLoading by remember { mutableStateOf(true) }
     var isDeleting by remember { mutableStateOf(false) }
@@ -105,6 +114,17 @@ fun EventsScreen(
             errorMessage = null
 
             val bearerToken = "Bearer $token"
+
+            val profileResponse = RetrofitClient.authApi.getProfile(bearerToken)
+
+            if (profileResponse.isSuccessful) {
+                currentUserUid = profileResponse.body()?.uid
+            } else if (profileResponse.code() == 401 || profileResponse.code() == 403) {
+                onInvalidToken()
+                return@LaunchedEffect
+            } else {
+                errorMessage = "No se pudo cargar la información del usuario."
+            }
 
             val response = when (selectedTab) {
                 EventTab.ALL -> RetrofitClient.eventsApi.getAllEvents(bearerToken)
@@ -244,16 +264,27 @@ fun EventsScreen(
                     } else {
                         items(
                             items = events,
-                            key = { event -> event.id ?: event.hashCode().toString() }
+                            key = { event -> event.id ?: event.eventId ?: event.hashCode().toString() }
                         ) { event ->
+                            val eventIsPast = isPastEvent(event.date)
+                            val isCreator = !event.creatorUid.isNullOrBlank() &&
+                                    event.creatorUid == currentUserUid
+
+                            val canManageEvent = isCreator && !eventIsPast
+
                             EventCard(
                                 event = event,
-                                showConfirmButton = event.confirmed != true && !event.id.isNullOrBlank(),
+                                isPastEvent = eventIsPast,
+                                isCreator = isCreator,
+                                canManageEvent = canManageEvent,
+                                showConfirmButton = !eventIsPast &&
+                                        event.confirmed != true &&
+                                        !event.id.isNullOrBlank(),
                                 onConfirmClick = {
                                     eventToConfirm = event
                                 },
                                 onEditClick = {
-                                    val id = event.id
+                                    val id = event.id ?: event.eventId
 
                                     if (!id.isNullOrBlank()) {
                                         onEditEvent(id)
@@ -263,9 +294,17 @@ fun EventsScreen(
                                     eventToDelete = event
                                 },
                                 onRateClick = {
-                                    val id = event.id
+                                    val id = event.id ?: event.eventId
+
                                     if (!id.isNullOrBlank()) {
                                         onRateEvent(id)
+                                    }
+                                },
+                                onViewEventClick = {
+                                    val id = event.id ?: event.eventId
+
+                                    if (!id.isNullOrBlank()) {
+                                        onViewEvent(id)
                                     }
                                 }
                             )
@@ -347,10 +386,16 @@ fun EventsScreen(
                             disabledContentColor = Color(0xFFBBF7D0)
                         ),
                         onClick = {
-                            val eventId = eventToConfirm?.id
+                            val eventId = eventToConfirm?.id ?: eventToConfirm?.eventId
 
                             if (eventId.isNullOrBlank()) {
                                 errorMessage = "No se pudo identificar el evento."
+                                eventToConfirm = null
+                                return@Button
+                            }
+
+                            if (isPastEvent(eventToConfirm?.date)) {
+                                errorMessage = "Este evento ya pasó. Ya no puedes confirmar asistencia."
                                 eventToConfirm = null
                                 return@Button
                             }
@@ -486,10 +531,34 @@ fun EventsScreen(
                             disabledContentColor = Color(0xFFFECACA)
                         ),
                         onClick = {
-                            val eventId = eventToDelete?.id
+                            val selectedEvent = eventToDelete
+
+                            if (selectedEvent == null) {
+                                errorMessage = "No se pudo identificar el evento."
+                                eventToDelete = null
+                                return@Button
+                            }
+
+                            val eventId = selectedEvent.id ?: selectedEvent.eventId
 
                             if (eventId.isNullOrBlank()) {
                                 errorMessage = "No se pudo identificar el evento."
+                                eventToDelete = null
+                                return@Button
+                            }
+
+                            val selectedEventIsPast = isPastEvent(selectedEvent.date)
+                            val selectedEventIsCreator = !selectedEvent.creatorUid.isNullOrBlank() &&
+                                    selectedEvent.creatorUid == currentUserUid
+
+                            if (selectedEventIsPast) {
+                                errorMessage = "Este evento ya pasó. No se puede eliminar."
+                                eventToDelete = null
+                                return@Button
+                            }
+
+                            if (!selectedEventIsCreator) {
+                                errorMessage = "Solo el creador del evento puede eliminarlo."
                                 eventToDelete = null
                                 return@Button
                             }
@@ -564,16 +633,24 @@ fun EventsScreen(
 @Composable
 private fun EventCard(
     event: EventResponse,
+    isPastEvent: Boolean,
+    isCreator: Boolean,
+    canManageEvent: Boolean,
     showConfirmButton: Boolean,
     onConfirmClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onRateClick: () -> Unit
+    onRateClick: () -> Unit,
+    onViewEventClick: () -> Unit
 ) {
+    var showOptionsMenu by remember { mutableStateOf(false) }
+
     val dateTimeText = listOfNotNull(
         event.date?.takeIf { it.isNotBlank() },
         event.time?.takeIf { it.isNotBlank() }
     ).joinToString(" - ").ifBlank { "--" }
+
+    val canRateEvent = event.confirmed == true && isPastEvent
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -630,42 +707,116 @@ private fun EventCard(
                     )
                 }
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
+                Box {
                     IconButton(
                         modifier = Modifier
                             .size(38.dp)
                             .background(
-                                color = Color(0xFFF59E0B).copy(alpha = 0.18f),
+                                color = Color.White.copy(alpha = 0.09f),
                                 shape = RoundedCornerShape(14.dp)
                             ),
-                        onClick = onEditClick
+                        onClick = {
+                            showOptionsMenu = true
+                        }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar evento",
-                            tint = Color(0xFFFBBF24),
-                            modifier = Modifier.size(20.dp)
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Opciones del evento",
+                            tint = Color.White,
+                            modifier = Modifier.size(21.dp)
                         )
                     }
 
-                    IconButton(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(
-                                color = Color(0xFFDC2626).copy(alpha = 0.18f),
-                                shape = RoundedCornerShape(14.dp)
-                            ),
-                        onClick = onDeleteClick
+                    DropdownMenu(
+                        expanded = showOptionsMenu,
+                        onDismissRequest = {
+                            showOptionsMenu = false
+                        },
+                        modifier = Modifier.background(Color(0xFF1E293B))
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Eliminar evento",
-                            tint = Color(0xFFFCA5A5),
-                            modifier = Modifier.size(20.dp)
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Ver evento",
+                                    color = Color.White
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null,
+                                    tint = Color(0xFF93C5FD)
+                                )
+                            },
+                            onClick = {
+                                showOptionsMenu = false
+                                onViewEventClick()
+                            }
                         )
+
+                        if (canManageEvent) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = "Editar evento",
+                                        color = Color.White
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFBBF24)
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onEditClick()
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = "Eliminar evento",
+                                        color = Color.White
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFCA5A5)
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onDeleteClick()
+                                }
+                            )
+                        }
+
+                        if (canRateEvent) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = "Calificar evento",
+                                        color = Color.White
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = Color(0xFF93C5FD)
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onRateClick()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -728,12 +879,39 @@ private fun EventCard(
                 }
             }
 
-            if (event.confirmed == true) {
-                Button(
-                    onClick = { onRateClick() }
+            if (!isCreator && !isPastEvent) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF334155).copy(alpha = 0.45f)
                 ) {
-                    Text("Calificar evento")
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFCBD5E1),
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+
+                        Text(
+                            text = "Solo el creador puede editar o eliminar este evento.",
+                            color = Color(0xFFE2E8F0),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 18.sp
+                        )
+                    }
                 }
+            }
+
+            if (event.confirmed == true) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Surface(
@@ -764,13 +942,71 @@ private fun EventCard(
                     }
                 }
             }
-//            Button(
-//                onClick = {
-//                    onRateClick()
-//                }
-//            ) {
-//                Text("Ver comentarios")
-//            }
+
+            if (isPastEvent && event.confirmed != true) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFF59E0B).copy(alpha = 0.18f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+
+                        Text(
+                            text = "Este evento ya pasó. Solo quienes confirmaron asistencia pueden calificarlo.",
+                            color = Color(0xFFFEF3C7),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+
+            if (isPastEvent && isCreator) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF7F1D1D).copy(alpha = 0.25f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFFCA5A5),
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+
+                        Text(
+                            text = "Evento pasado: no se puede editar ni eliminar.",
+                            color = Color(0xFFFECACA),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+
             if (showConfirmButton) {
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -880,5 +1116,23 @@ private fun ErrorBox(
             lineHeight = 18.sp,
             modifier = Modifier.padding(14.dp)
         )
+    }
+}
+
+private fun isPastEvent(date: String?): Boolean {
+    if (date.isNullOrBlank()) return false
+
+    return try {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        formatter.isLenient = false
+
+        val eventDate = formatter.parse(date) ?: return false
+
+        val todayText = formatter.format(Date())
+        val todayDate = formatter.parse(todayText) ?: return false
+
+        eventDate.before(todayDate)
+    } catch (e: Exception) {
+        false
     }
 }

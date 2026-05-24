@@ -14,11 +14,34 @@ interface AttendanceApi {
         @Path("eventId") eventId: String
     ): Response<MessageResponse>
 
+    @POST("attendance/{eventId}/cancel")
+    suspend fun cancelAttendance(
+        @Header("Authorization") token: String,
+        @Path("eventId") eventId: String
+    ): Response<MessageResponse>
+
     @GET("attendance/{eventId}/status")
     suspend fun getAttendanceStatus(
         @Header("Authorization") token: String,
         @Path("eventId") eventId: String
     ): Response<AttendanceStatusResponse>
+
+    @GET("attendance/{eventId}/count")
+    suspend fun getAttendanceCount(
+        @Header("Authorization") token: String,
+        @Path("eventId") eventId: String
+    ): Response<AttendanceCountResponse>
+
+    @GET("attendance/{eventId}/attendees")
+    suspend fun getEventAttendees(
+        @Header("Authorization") token: String,
+        @Path("eventId") eventId: String
+    ): Response<List<AttendeeResponse>>
+
+    @GET("attendance/my-history")
+    suspend fun getMyAttendanceHistory(
+        @Header("Authorization") token: String
+    ): Response<List<EventResponse>>
 }
 
 data class MessageResponse(

@@ -40,4 +40,8 @@ const val BASE_URL = "http://10.0.2.2:3000/"
         retrofit.create(RatingsApi::class.java)
     }
 
+    val commentsApi: CommentsApi by lazy {
+        retrofit.create(CommentsApi::class.java)
+    }
+
 }

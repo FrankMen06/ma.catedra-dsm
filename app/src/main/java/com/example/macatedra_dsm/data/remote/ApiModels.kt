@@ -41,6 +41,7 @@ data class ApiErrorResponse(
 
 data class EventResponse(
     val id: String? = null,
+    val eventId: String? = null,
     val title: String? = null,
     val description: String? = null,
     val date: String? = null,
@@ -58,4 +59,42 @@ data class AttendanceData(
     val name: String? = null,
     val confirmed: Boolean? = false,
     val updatedAt: String? = null
+)
+
+data class AttendeeResponse(
+    val id: String? = null,
+    val uid: String? = null,
+    val name: String? = null,
+    val confirmed: Boolean? = null,
+    val updatedAt: String? = null
+)
+
+data class AttendanceCountResponse(
+    val count: Int = 0
+)
+
+data class CommentResponse(
+    val id: String? = null,
+    val uid: String? = null,
+    val userName: String? = null,
+    val comment: String? = null,
+    val rating: Int? = null,
+    val createdAt: String? = null,
+    val editedAt: String? = null
+)
+
+data class RatingSummaryResponse(
+    val average: Double = 0.0,
+    val count: Int = 0
+)
+
+data class RatingResponse(
+    val id: String? = null,
+    val eventId: String? = null,
+    val uid: String? = null,
+    val userName: String? = null,
+    val name: String? = null,
+    val rating: Int? = null,
+    val comment: String? = null,
+    val createdAt: String? = null
 )
