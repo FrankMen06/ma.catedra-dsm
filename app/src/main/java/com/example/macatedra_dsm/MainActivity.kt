@@ -12,13 +12,16 @@ import androidx.navigation.compose.rememberNavController
 import com.example.macatedra_dsm.data.local.TokenManager
 import com.example.macatedra_dsm.ui.screens.auth.LoginScreen
 import com.example.macatedra_dsm.ui.screens.auth.RegisterScreen
+import com.example.macatedra_dsm.ui.screens.events.AttendingEventsScreen
 import com.example.macatedra_dsm.ui.screens.events.CreateEventScreen
 import com.example.macatedra_dsm.ui.screens.events.EditEventScreen
+import com.example.macatedra_dsm.ui.screens.events.EventDetailScreen
 import com.example.macatedra_dsm.ui.screens.events.EventsScreen
 import com.example.macatedra_dsm.ui.screens.home.DashboardScreen
-import com.example.macatedra_dsm.ui.theme.MacatedradsmTheme
-import com.example.macatedra_dsm.ui.screens.ratings.RatingScreen
 import com.example.macatedra_dsm.ui.screens.ratings.EventRatingsScreen
+import com.example.macatedra_dsm.ui.screens.ratings.RatingScreen
+import com.example.macatedra_dsm.ui.theme.MacatedradsmTheme
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,8 +42,10 @@ class MainActivity : ComponentActivity() {
                 fun logout() {
                     TokenManager.clearToken(context)
                     savedToken = null
+
                     navController.navigate("login") {
                         popUpTo(0)
+                        launchSingleTop = true
                     }
                 }
 
@@ -54,12 +59,18 @@ class MainActivity : ComponentActivity() {
                             onLoginSuccess = { token ->
                                 TokenManager.saveToken(context, token)
                                 savedToken = token
+
                                 navController.navigate("dashboard") {
-                                    popUpTo("login") { inclusive = true }
+                                    popUpTo("login") {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
                                 }
                             },
                             onGoToRegister = {
-                                navController.navigate("register")
+                                navController.navigate("register") {
+                                    launchSingleTop = true
+                                }
                             },
                             onBack = {}
                         )
@@ -67,22 +78,46 @@ class MainActivity : ComponentActivity() {
 
                     composable("register") {
                         RegisterScreen(
-                            onBack = { navController.popBackStack() },
-                            onGoToLogin = { navController.popBackStack() }
+                            onBack = {
+                                navController.popBackStack()
+                            },
+                            onGoToLogin = {
+                                navController.popBackStack()
+                            }
                         )
                     }
 
                     composable("dashboard") {
                         val token = savedToken
 
-                        if (!token.isNullOrBlank()) {
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
                             DashboardScreen(
                                 token = token,
-                                onLogout = { logout() },
-                                onGoToEvents = {
-                                    navController.navigate("events")
+                                onLogout = {
+                                    logout()
                                 },
-                                onInvalidToken = { logout() }
+                                onGoToEvents = { mode ->
+                                    when (mode) {
+                                        "ATTENDING" -> {
+                                            navController.navigate("attending_events") {
+                                                launchSingleTop = true
+                                            }
+                                        }
+
+                                        else -> {
+                                            navController.navigate("events") {
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    }
+                                },
+                                onInvalidToken = {
+                                    logout()
+                                }
                             )
                         }
                     }
@@ -90,78 +125,178 @@ class MainActivity : ComponentActivity() {
                     composable("events") {
                         val token = savedToken
 
-                        if (!token.isNullOrBlank()) {
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
                             EventsScreen(
                                 token = token,
-                                mode = "ALL", // <- agregar esto
+                                mode = "ALL",
                                 onCreateEvent = {
-                                    navController.navigate("create_event")
+                                    navController.navigate("create_event") {
+                                        launchSingleTop = true
+                                    }
                                 },
                                 onEditEvent = { id ->
-                                    navController.navigate("edit_event/$id")
+                                    navController.navigate("edit_event/$id") {
+                                        launchSingleTop = true
+                                    }
                                 },
                                 onRateEvent = { id ->
-                                    navController.navigate("rating/$id")
+                                    navController.navigate("rating/$id") {
+                                        launchSingleTop = true
+                                    }
                                 },
                                 onViewRatings = { id ->
-                                    navController.navigate("ratings/$id")
+                                    navController.navigate("ratings/$id") {
+                                        launchSingleTop = true
+                                    }
                                 },
-                                onInvalidToken = { logout() }
+                                onViewEvent = { id ->
+                                    navController.navigate("event_detail/$id") {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onInvalidToken = {
+                                    logout()
+                                }
+                            )
+                        }
+                    }
+
+                    composable("attending_events") {
+                        val token = savedToken
+
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
+                            AttendingEventsScreen(
+                                token = token,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onInvalidToken = {
+                                    logout()
+                                }
+                            )
+                        }
+                    }
+
+                    composable("event_detail/{eventId}") { backStack ->
+                        val token = savedToken
+                        val id = backStack.arguments?.getString("eventId") ?: ""
+
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
+                            EventDetailScreen(
+                                token = token,
+                                eventId = id,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onRateEvent = { eventId ->
+                                    navController.navigate("rating/$eventId") {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onInvalidToken = {
+                                    logout()
+                                }
                             )
                         }
                     }
 
                     composable("create_event") {
-                        CreateEventScreen(
-                            token = savedToken ?: "",
-                            onBack = { navController.popBackStack() },
-                            onCreated = { navController.popBackStack() },
-                            onInvalidToken = { logout() }
-                        )
+                        val token = savedToken
+
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
+                            CreateEventScreen(
+                                token = token,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onCreated = {
+                                    navController.popBackStack()
+                                },
+                                onInvalidToken = {
+                                    logout()
+                                }
+                            )
+                        }
                     }
 
                     composable("edit_event/{eventId}") { backStack ->
+                        val token = savedToken
                         val id = backStack.arguments?.getString("eventId") ?: ""
 
-                        EditEventScreen(
-                            token = savedToken ?: "",
-                            eventId = id,
-                            onBack = { navController.popBackStack() },
-                            onUpdated = { navController.popBackStack() },
-                            onInvalidToken = { logout() }
-                        )
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
+                            EditEventScreen(
+                                token = token,
+                                eventId = id,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onUpdated = {
+                                    navController.popBackStack()
+                                },
+                                onInvalidToken = {
+                                    logout()
+                                }
+                            )
+                        }
                     }
+
                     composable("rating/{eventId}") { backStack ->
+                        val token = savedToken
                         val id = backStack.arguments?.getString("eventId") ?: ""
 
-                        RatingScreen(
-                            token = savedToken ?: "",
-                            eventId = id,
-                            onBack = { navController.popBackStack() }
-                        )
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
+                            RatingScreen(
+                                token = token,
+                                eventId = id,
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
                     }
+
                     composable("ratings/{eventId}") { backStack ->
+                        val token = savedToken
                         val id = backStack.arguments?.getString("eventId") ?: ""
 
-                        RatingScreen(
-                            token = savedToken ?: "",
-                            eventId = id,
-                            onBack = { navController.popBackStack() }
-                        )
+                        if (token.isNullOrBlank()) {
+                            LaunchedEffect(Unit) {
+                                logout()
+                            }
+                        } else {
+                            EventRatingsScreen(
+                                token = token,
+                                eventId = id,
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
                     }
-//                    composable("events/{mode}") { backStackEntry ->
-//                        val mode = backStackEntry.arguments?.getString("mode") ?: "ALL"
-//
-//                        EventsScreen(
-//                            token = token,
-//                            mode = mode,
-//                            onCreateEvent = { },
-//                            onEditEvent = { },
-//                            onInvalidToken = { },
-//                            onRateEvent = { },
-//                            onViewRatings = { }
-//                        )
-//                    }
                 }
             }
         }

@@ -1,6 +1,9 @@
 package com.example.macatedra_dsm.ui.screens.events
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +19,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -43,12 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.macatedra_dsm.data.remote.CreateEventRequest
 import com.example.macatedra_dsm.data.remote.RetrofitClient
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun CreateEventScreen(
@@ -57,6 +65,9 @@ fun CreateEventScreen(
     onCreated: () -> Unit,
     onInvalidToken: () -> Unit
 ) {
+    val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
+
     var title by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
@@ -68,6 +79,54 @@ fun CreateEventScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+
+    fun openDatePicker() {
+        val currentYear = calendar.get(Calendar.YEAR)
+        val currentMonth = calendar.get(Calendar.MONTH)
+        val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
+
+        DatePickerDialog(
+            context,
+            { _, selectedYear, selectedMonth, selectedDay ->
+                val formattedDate = String.format(
+                    Locale.US,
+                    "%04d-%02d-%02d",
+                    selectedYear,
+                    selectedMonth + 1,
+                    selectedDay
+                )
+
+                date = formattedDate
+                errorMessage = null
+            },
+            currentYear,
+            currentMonth,
+            currentDay
+        ).show()
+    }
+
+    fun openTimePicker() {
+        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+        val currentMinute = calendar.get(Calendar.MINUTE)
+
+        TimePickerDialog(
+            context,
+            { _, selectedHour, selectedMinute ->
+                val formattedTime = String.format(
+                    Locale.US,
+                    "%02d:%02d",
+                    selectedHour,
+                    selectedMinute
+                )
+
+                time = formattedTime
+                errorMessage = null
+            },
+            currentHour,
+            currentMinute,
+            true
+        ).show()
+    }
 
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(
@@ -162,35 +221,57 @@ fun CreateEventScreen(
 
                         AppTextField(
                             value = title,
-                            onValueChange = { title = it },
+                            onValueChange = {
+                                title = it
+                                errorMessage = null
+                            },
                             label = "Título",
                             placeholder = "Ej. Charla de Desarrollo Móvil"
                         )
 
-                        AppTextField(
+                        PickerTextField(
                             value = date,
-                            onValueChange = { date = it },
                             label = "Fecha",
-                            placeholder = "YYYY-MM-DD"
+                            placeholder = "Seleccionar fecha",
+                            icon = Icons.Default.CalendarMonth,
+                            onClick = {
+                                openDatePicker()
+                            }
                         )
 
-                        AppTextField(
+                        PickerTextField(
                             value = time,
-                            onValueChange = { time = it },
                             label = "Hora",
-                            placeholder = "HH:mm"
+                            placeholder = "Seleccionar hora",
+                            icon = Icons.Default.AccessTime,
+                            onClick = {
+                                openTimePicker()
+                            }
                         )
 
                         AppTextField(
                             value = location,
-                            onValueChange = { location = it },
+                            onValueChange = {
+                                location = it
+                                errorMessage = null
+                            },
                             label = "Ubicación",
-                            placeholder = "Ej. Auditorio principal"
+                            placeholder = "Ej. Auditorio principal",
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color(0xFF94A3B8)
+                                )
+                            }
                         )
 
                         AppTextField(
                             value = description,
-                            onValueChange = { description = it },
+                            onValueChange = {
+                                description = it
+                                errorMessage = null
+                            },
                             label = "Descripción",
                             placeholder = "Describe brevemente el evento",
                             minLines = 4
@@ -222,15 +303,31 @@ fun CreateEventScreen(
                                 val cleanLocation = location.trim()
                                 val cleanDescription = description.trim()
 
-                                if (
-                                    cleanTitle.isBlank() ||
-                                    cleanDate.isBlank() ||
-                                    cleanTime.isBlank() ||
-                                    cleanLocation.isBlank() ||
-                                    cleanDescription.isBlank()
-                                ) {
-                                    errorMessage = "Completá todos los campos para crear el evento."
-                                    return@Button
+                                when {
+                                    cleanTitle.isBlank() -> {
+                                        errorMessage = "Ingresá el título del evento."
+                                        return@Button
+                                    }
+
+                                    cleanDate.isBlank() -> {
+                                        errorMessage = "Seleccioná la fecha del evento."
+                                        return@Button
+                                    }
+
+                                    cleanTime.isBlank() -> {
+                                        errorMessage = "Seleccioná la hora del evento."
+                                        return@Button
+                                    }
+
+                                    cleanLocation.isBlank() -> {
+                                        errorMessage = "Ingresá la ubicación del evento."
+                                        return@Button
+                                    }
+
+                                    cleanDescription.isBlank() -> {
+                                        errorMessage = "Ingresá la descripción del evento."
+                                        return@Button
+                                    }
                                 }
 
                                 scope.launch {
@@ -364,7 +461,8 @@ private fun AppTextField(
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
-    minLines: Int = 1
+    minLines: Int = 1,
+    leadingIcon: (@Composable () -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -378,6 +476,7 @@ private fun AppTextField(
         placeholder = {
             Text(text = placeholder)
         },
+        leadingIcon = leadingIcon,
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White,
@@ -390,6 +489,52 @@ private fun AppTextField(
             cursorColor = Color(0xFF60A5FA)
         )
     )
+}
+
+@Composable
+private fun PickerTextField(
+    value: String,
+    label: String,
+    placeholder: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick()
+            }
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            readOnly = true,
+            shape = RoundedCornerShape(18.dp),
+            label = {
+                Text(text = label)
+            },
+            placeholder = {
+                Text(text = placeholder)
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color(0xFF94A3B8)
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = Color.White,
+                disabledBorderColor = Color.White.copy(alpha = 0.22f),
+                disabledLabelColor = Color(0xFFCBD5E1),
+                disabledPlaceholderColor = Color(0xFF94A3B8),
+                disabledLeadingIconColor = Color(0xFF94A3B8)
+            )
+        )
+    }
 }
 
 @Composable

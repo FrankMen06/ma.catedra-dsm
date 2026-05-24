@@ -261,65 +261,6 @@ fun DashboardScreen(
                                 )
                             }
 
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(18.dp),
-                                    color = Color(0xFFF59E0B).copy(alpha = 0.18f)
-                                ) {
-                                    Box(
-                                        modifier = Modifier.size(52.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.History,
-                                            contentDescription = "Historial",
-                                            tint = Color(0xFFFBBF24),
-                                            modifier = Modifier.size(27.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "Historial",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(18.dp),
-                                    color = Color(0xFF8B5CF6).copy(alpha = 0.18f)
-                                ) {
-                                    Box(
-                                        modifier = Modifier.size(52.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Forum,
-                                            contentDescription = "Social",
-                                            tint = Color(0xFFA78BFA),
-                                            modifier = Modifier.size(27.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "Social",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
                         }
                     }
 

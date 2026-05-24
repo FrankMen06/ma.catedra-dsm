@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import com.example.macatedra_dsm.data.remote.RatingsApi
 import com.example.macatedra_dsm.data.remote.RetrofitClient
 import com.example.macatedra_dsm.data.remote.RatingRequest
+import com.example.macatedra_dsm.data.remote.RatingResponse
 import kotlinx.coroutines.launch
 
 @Composable
@@ -24,7 +25,7 @@ fun EventRatingsScreen(
     eventId: String,
     onBack: () -> Unit
 ) {
-    var ratings by remember { mutableStateOf(listOf<RatingRequest>()) }
+    var ratings by remember { mutableStateOf(listOf<RatingResponse>()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -59,9 +60,15 @@ fun EventRatingsScreen(
         loadRatings()
     }
 
-    val average = if (ratings.isNotEmpty()) {
-        ratings.map { it.rating }.average()
-    } else 0.0
+    val validRatings = ratings
+        .mapNotNull { it.rating }
+        .filter { it in 1..5 }
+
+    val average = if (validRatings.isNotEmpty()) {
+        validRatings.average()
+    } else {
+        0.0
+    }
 
     Column(
         modifier = Modifier
