@@ -11,17 +11,27 @@ data class LoginRequest(
     val email: String,
     val password: String
 )
-
+data class AuthLoginResponse(
+    val token: String,
+    val uid: String?,
+    val name: String?,
+    val email: String?
+)
+data class LoginResponse(
+    val token: String,
+    val uid: String,
+    val name: String,
+    val email: String
+)
 data class AuthResponse(
-    val uid: String? = null,
-    val name: String? = null,
-    val email: String? = null,
-    val photoURL: String? = null,
-    val provider: String? = null,
-    val providerId: String? = null,
-    val role: String? = null,
-    val token: String? = null,
-    val message: String? = null
+    val uid: String,
+    val name: String,
+    val email: String,
+    val photoURL: String?,
+    val provider: String?,
+    val providerId: String?,
+    val role: String?,
+    val createdAt: String?
 )
 
 data class ApiErrorResponse(

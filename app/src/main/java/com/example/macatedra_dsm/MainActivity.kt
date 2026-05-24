@@ -22,9 +22,19 @@ import com.example.macatedra_dsm.ui.screens.ratings.EventRatingsScreen
 import com.example.macatedra_dsm.ui.screens.ratings.RatingScreen
 import com.example.macatedra_dsm.ui.theme.MacatedradsmTheme
 
+import com.example.macatedra_dsm.ui.screens.ratings.RatingScreen
+import com.example.macatedra_dsm.ui.screens.ratings.EventRatingsScreen
+import com.facebook.FacebookSdk
+import com.facebook.appevents.AppEventsLogger
+import com.facebook.CallbackManager
 class MainActivity : ComponentActivity() {
+//    private lateinit var callbackManager: CallbackManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        FacebookSdk.sdkInitialize(applicationContext)
+        AppEventsLogger.activateApp(application)
+
         enableEdgeToEdge()
 
         setContent {
