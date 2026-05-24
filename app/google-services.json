@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "122262339799",
+    "firebase_url": "https://catedra-dsm-default-rtdb.firebaseio.com",
+    "project_id": "catedra-dsm",
+    "storage_bucket": "catedra-dsm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:122262339799:android:ad667bd23e805b2e177092",
+        "android_client_info": {
+          "package_name": "com.example.macatedra_dsm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhiX4smeRT5XRo9TS8xk1_oObwlnG4Rhk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

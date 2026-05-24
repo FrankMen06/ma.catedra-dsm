@@ -137,6 +137,7 @@ fun LoginScreen(
             Button(
                 onClick = {
                     scope.launch {
+
                         if (email.isBlank() || password.isBlank()) {
                             message = "Ingresa correo y contraseña."
                             isError = true
@@ -147,57 +148,80 @@ fun LoginScreen(
                         message = null
 
                         try {
+
                             val response = RetrofitClient.authApi.login(
                                 LoginRequest(
                                     email = email.trim(),
                                     password = password
                                 )
                             )
+
                             Log.d("LOGIN_DEBUG", "code = ${response.code()}")
                             Log.d("LOGIN_DEBUG", "body = ${response.body()}")
                             Log.d("LOGIN_DEBUG", "error = ${response.errorBody()?.string()}")
+
                             if (response.isSuccessful) {
+
                                 val body = response.body()
                                 val token = body?.token
 
                                 if (!token.isNullOrBlank()) {
+
                                     message = "Inicio de sesión correcto."
                                     isError = false
+
                                     onLoginSuccess(token)
+
                                 } else {
+
                                     message = "El servidor no devolvió token."
                                     isError = true
                                 }
+
                             } else {
+
                                 message = extractErrorMessage(response.errorBody()?.string())
                                 isError = true
                             }
+
                         } catch (e: Exception) {
+
                             message = "No se pudo conectar con el servidor: ${e.message}"
                             isError = true
+
                         } finally {
+
                             isLoading = false
                         }
                     }
                 },
+
                 enabled = !isLoading,
+
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
+
                 shape = RoundedCornerShape(16.dp),
+
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AccentBlue,
                     contentColor = Color.White,
                     disabledContainerColor = AccentBlue.copy(alpha = 0.45f),
                     disabledContentColor = Color.White.copy(alpha = 0.75f)
                 )
+
             ) {
+
                 if (isLoading) {
+
                     CircularProgressIndicator(
                         color = Color.White,
                         strokeWidth = 2.dp
                     )
+
                 } else {
+
                     Text(
                         text = "Entrar",
                         fontSize = 16.sp,
@@ -205,6 +229,14 @@ fun LoginScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            FacebookLoginButton(
+                onLoginSuccess = { firebaseToken ->
+                    onLoginSuccess(firebaseToken)
+                }
+            )
         }
     }
 }
@@ -322,8 +354,7 @@ fun RegisterScreen(
                             if (response.isSuccessful) {
                                 val body = response.body()
 
-                                successMessage = body?.message
-                                    ?: "Usuario registrado correctamente. Ahora inicia sesión."
+                                successMessage = "Usuario creado correctamente"
 
                                 showSuccessDialog = true
 
