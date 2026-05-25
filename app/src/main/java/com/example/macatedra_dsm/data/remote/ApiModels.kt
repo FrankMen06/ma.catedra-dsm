@@ -24,14 +24,15 @@ data class LoginResponse(
     val email: String
 )
 data class AuthResponse(
-    val uid: String,
-    val name: String,
-    val email: String,
-    val photoURL: String?,
-    val provider: String?,
-    val providerId: String?,
-    val role: String?,
-    val createdAt: String?
+    val uid: String? = null,
+    val name: String? = null,
+    val email: String? = null,
+    val photoURL: String? = null,
+    val provider: String? = null,
+    val providerId: String? = null,
+    val role: String? = null,
+    val token: String? = null,
+    val message: String? = null
 )
 
 data class ApiErrorResponse(

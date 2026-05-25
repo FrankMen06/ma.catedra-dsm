@@ -7,15 +7,10 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface AuthApi {
-
-//    @POST("auth/register")
-//    suspend fun register(
-//        @Body request: RegisterRequest
-//    ): Response<AuthResponse>
 @POST("auth/register")
 suspend fun register(
     @Body request: RegisterRequest
-): Response<LoginResponse>
+): Response<AuthResponse>
 
 //    @POST("auth/login")
 //    suspend fun login(
@@ -25,7 +20,7 @@ suspend fun register(
     @POST("auth/login")
     suspend fun login(
         @Body request: LoginRequest
-    ): Response<LoginResponse>
+    ): Response<AuthResponse>
     @GET("users/me")
     suspend fun getProfile(
         @Header("Authorization") token: String

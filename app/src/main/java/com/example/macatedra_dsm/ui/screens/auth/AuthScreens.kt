@@ -229,14 +229,6 @@ fun LoginScreen(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FacebookLoginButton(
-                onLoginSuccess = { firebaseToken ->
-                    onLoginSuccess(firebaseToken)
-                }
-            )
         }
     }
 }
@@ -354,8 +346,7 @@ fun RegisterScreen(
                             if (response.isSuccessful) {
                                 val body = response.body()
 
-                                successMessage = "Usuario creado correctamente"
-
+                                successMessage = body?.message ?: "Usuario registrado correctamente. Ahora inicia sesión."
                                 showSuccessDialog = true
 
                                 kotlinx.coroutines.delay(2000)
