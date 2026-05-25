@@ -24,7 +24,7 @@ Este repositorio contiene el código fuente de la aplicación Android desarrolla
 Aquí se encuentran los enlaces a los demás apoyos para el proyecto
 
 - 📋 **Backend:** [Ver Repositorio BE](https://github.com/FrankMen06/be.catedra-dsm.git)
-- 🎨 **Documento con Mockups:** (#)
+- 🎨 **Documento con Mockups:** (https://drive.google.com/file/d/1kjpWPPxiYG5bJXcWby9YuneZjhjdeNkD/view?usp=sharing)
 
 ---
 
