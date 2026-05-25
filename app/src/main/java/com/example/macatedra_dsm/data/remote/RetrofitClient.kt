@@ -4,16 +4,24 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-//    private const val BASE_URL = "http://10.0.2.2:3000/"
-const val BASE_URL = "http://10.0.2.2:3000/"
+    // Local emulador:
+    // private const val BASE_URL = "http://10.0.2.2:3000/"
+
+    // Backend publicado en Render:
+    const val BASE_URL = "https://be-catedra-dsm.onrender.com/"
+
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
     private val client = OkHttpClient.Builder()
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .addInterceptor(loggingInterceptor)
         .build()
 
@@ -36,6 +44,7 @@ const val BASE_URL = "http://10.0.2.2:3000/"
     val attendanceApi: AttendanceApi by lazy {
         retrofit.create(AttendanceApi::class.java)
     }
+
     val ratingsApi: RatingsApi by lazy {
         retrofit.create(RatingsApi::class.java)
     }
@@ -43,5 +52,4 @@ const val BASE_URL = "http://10.0.2.2:3000/"
     val commentsApi: CommentsApi by lazy {
         retrofit.create(CommentsApi::class.java)
     }
-
 }
